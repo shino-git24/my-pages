@@ -1,7 +1,7 @@
-const CACHE_NAME = 'checklist-cache-v1';
-// キャッシュするファイルのリスト
+// キャッシュの名前は固定でOK
+const CACHE_NAME = 'checklist-cache-final';
 const urlsToCache = [
-  '.', // index.html
+  '.',
   'index.html',
   'style.css',
   'script.js',
@@ -11,7 +11,7 @@ const urlsToCache = [
   'icons/icon-512x512.png'
 ];
 
-// インストール処理
+// インストール時に、基本的なファイル（アプケーションの骨格）をキャッシュする
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -19,26 +19,11 @@ self.addEventListener('install', event => {
         console.log('Opened cache');
         return cache.addAll(urlsToCache);
       })
+      .then(() => self.skipWaiting())
   );
 });
 
-// リクエストがあった場合に、キャッシュまたはネットワークから返す
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // キャッシュがあったらそれを返す
-        if (response) {
-          return response;
-        }
-        // キャッシュがなかったらネットワークに取りに行く
-        return fetch(event.request);
-      }
-    )
-  );
-});
-
-// 古いキャッシュを削除する
+// activateイベントでは、古いキャッシュを削除する（念のため残しておく）
 self.addEventListener('activate', event => {
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
@@ -51,5 +36,33 @@ self.addEventListener('activate', event => {
         })
       );
     })
+    .then(() => self.clients.claim())
+  );
+});
+
+// ★★★ リクエストの処理方法を「Network First」に変更 ★★★
+self.addEventListener('fetch', event => {
+  // items.jsonは常にネットワークから最新を取得しようと試みる
+  if (event.request.url.includes('items.json')) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // その他のリクエストは「Network First, falling back to Cache」戦略
+  event.respondWith(
+    fetch(event.request)
+      .then(networkResponse => {
+        // ネットワークから取得できたら、キャッシュを更新してレスポンスを返す
+        return caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
+      })
+      .catch(() => {
+        // ネットワークに失敗した場合（オフラインなど）、キャッシュから返す
+        return caches.match(event.request);
+      })
   );
 });
