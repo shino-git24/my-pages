@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fes Checklist</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#8B4513">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,10 +25,8 @@
         <table id="checklist">
             <thead>
                 <tr>
-                    <th class="col-prepared">事前</th>
-                    <th class="col-confirmed">当日</th>
                     <th class="col-name">品名</th>
-                    <th class="col-purchase">購入</th>
+                    <th class="col-checks">ステータス</th>
                     <th class="col-memo">メモ</th>
                     <th class="col-actions">操作</th>
                 </tr>
@@ -35,5 +37,17 @@
     </div>
 
     <script src="script.js"></script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful: ', registration);
+                }, err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
 </body>
 </html>
