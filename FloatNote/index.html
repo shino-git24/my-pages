@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FloatNote</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#f8f9fa">
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <button id="new-note-btn">新しいメモを作成</button>
+            </div>
+            <ul id="note-list"></ul>
+        </aside>
+        <main class="main-content">
+            <div class="search-container">
+                <button id="sidebar-toggle-btn">❮</button>
+                <input type="search" id="search-input" placeholder="メモ内を検索...">
+                <button id="delete-note-btn">削除</button>
+            </div>
+            <input type="text" id="note-title" placeholder="タイトル">
+            <div class="editor-toolbar">
+                <button data-command="bold"><b>B</b></button>
+                <button data-command="italic"><i>I</i></button>
+                <button data-command="underline"><u>U</u></button>
+            </div>
+            <div id="note-editor" contenteditable="true" placeholder="ここにメモを入力"></div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
