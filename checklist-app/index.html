@@ -13,7 +13,6 @@
     <div class="container">
         <h1>RSR 持ち物チェックリスト</h1>
         <div id="progress"></div>
-        <div id="legend"></div>
         <div class="controls">
             <button id="addItemBtn" class="btn btn-add">＋ 項目を追加</button>
         </div>
@@ -21,9 +20,9 @@
         <table id="checklist">
             <thead>
                 <tr>
-                    <th class="col-checks" colspan="2">ステータス</th>
+                    <th class="col-check">前</th>
+                    <th class="col-check">当</th>
                     <th class="col-name">品名</th>
-                    <th class="col-memo">メモ</th>
                     <th class="col-actions">操作</th>
                 </tr>
             </thead>
@@ -35,8 +34,7 @@
     <div id="add-item-modal" class="modal-overlay">
         <div class="modal-content">
             <h2>新しい項目を追加</h2>
-            <input type="text" id="new-item-name" placeholder="品名" autocomplete="off">
-            <input type="text" id="new-item-memo" placeholder="メモ（任意）" autocomplete="off">
+            <input type="text" id="new-item-name" placeholder="品名（メモは品名に含めてください）" autocomplete="off">
             <select id="new-item-category"></select>
             <div class="modal-actions">
                 <button id="add-item-confirm-btn" class="btn btn-add">この内容で追加</button>
