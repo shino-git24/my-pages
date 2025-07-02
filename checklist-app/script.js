@@ -5,16 +5,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressDiv = document.getElementById('progress');
     const storageKey = 'rsrChecklistItems';
     
-    // ★★★ 1. スクリプトのバージョンを定義 ★★★
-    const SCRIPT_VERSION = "1.3"; // ファイルを更新するたびに、ここの数字を少し変えると確実です
+    // スクリプトのバージョンを更新
+    const SCRIPT_VERSION = "1.4"; 
 
     let items = [];
     let categoryState = {};
 
-    // ★★★ 2. JSON読み込み時にキャッシュを回避するよう変更 ★★★
     async function loadItemsFromJSON() {
         try {
-            // URLに現在時刻を付与して、ブラウザのキャッシュを無効化する
             const response = await fetch(`items.json?t=${new Date().getTime()}`);
             const parsedItems = await response.json();
             
@@ -31,15 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // アプリを初期化
     async function initializeApp() {
-        // ★★★ 3. バージョンをチェックして、古ければデータをクリア ★★★
         const savedVersion = localStorage.getItem(`${storageKey}_version`);
         if (savedVersion !== SCRIPT_VERSION) {
             console.log(`バージョンが異なるためデータをリセットします。(旧: ${savedVersion}, 新: ${SCRIPT_VERSION})`);
             localStorage.removeItem(storageKey);
             localStorage.removeItem(`${storageKey}_categoryState`);
-            localStorage.setItem(`${storageKey}_version`, SCRIPT_VERSION); // 新しいバージョンを保存
+            localStorage.setItem(`${storageKey}_version`, SCRIPT_VERSION);
         }
 
         const savedItems = localStorage.getItem(storageKey);
@@ -60,15 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
         updateProgress();
     }
 
-    // データをローカルストレージに保存
     const saveItems = () => {
         localStorage.setItem(storageKey, JSON.stringify(items));
         localStorage.setItem(`${storageKey}_categoryState`, JSON.stringify(categoryState));
-        // バージョン情報も保存しておく
         localStorage.setItem(`${storageKey}_version`, SCRIPT_VERSION);
     };
 
-    // 進捗状況を更新
     const updateProgress = () => {
         const totalItems = items.length;
         const preparedItems = items.filter(item => item.prepared).length;
@@ -77,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // リストを描画
     const renderList = () => {
         checklistBody.innerHTML = '';
         const categories = [...new Set(items.map(item => item.category || 'その他'))];
@@ -105,6 +97,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (categoryState[category]) {
                     row.style.display = 'none';
                 }
+
+                // ★★★ スマホ用のHTML構造を要望に合わせて変更 ★★★
                 row.innerHTML = `
                     <td data-label="事前" class="col-prepared"><input type="checkbox" class="prepared" ${item.prepared ? 'checked' : ''}></td>
                     <td data-label="当日" class="col-confirmed"><input type="checkbox" class="confirmed" ${item.confirmed ? 'checked' : ''}></td>
@@ -112,6 +106,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td data-label="購入" class="col-purchase"><input type="checkbox" class="needsPurchase" ${item.needsPurchase ? 'checked' : ''}></td>
                     <td data-label="メモ" class="col-memo"><input type="text" class="memo" value="${item.memo}"></td>
                     <td data-label="操作" class="col-actions actions"><button class="btn btn-delete">削除</button></td>
+
+                    <td class="mobile-card">
+                        <div class="card-cell item-controls">
+                            <div class="checkbox-group">
+                                <label class="checkbox-label"><input type="checkbox" class="prepared" ${item.prepared ? 'checked' : ''}> 事前</label>
+                                <label class="checkbox-label"><input type="checkbox" class="confirmed" ${item.confirmed ? 'checked' : ''}> 当日</label>
+                                <label class="checkbox-label"><input type="checkbox" class="needsPurchase" ${item.needsPurchase ? 'checked' : ''}> 購入</label>
+                            </div>
+                            <button class="btn btn-delete">削除</button>
+                        </div>
+                        <div class="card-cell item-name">
+                            <input type="text" class="name" value="${item.name}" placeholder="品名">
+                        </div>
+                        <div class="card-cell item-memo">
+                            <input type="text" class="memo" value="${item.memo}" placeholder="メモ">
+                        </div>
+                    </td>
                 `;
                 checklistBody.appendChild(row);
             });
@@ -120,29 +131,37 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- イベントリスナー ---
+    // イベント処理を.mobile-card内でもPC表示でも両方で機能するように調整
     checklistBody.addEventListener('input', (e) => {
         const row = e.target.closest('tr');
         if (!row) return;
         const id = parseFloat(row.dataset.id);
         const item = items.find(i => i.id === id);
 
-        if (item) {
-            if (e.target.classList.contains('name')) item.name = e.target.value;
-            if (e.target.classList.contains('memo')) item.memo = e.target.value;
-            saveItems();
-        }
+        if (item && e.target.classList.contains('name')) item.name = e.target.value;
+        if (item && e.target.classList.contains('memo')) item.memo = e.target.value;
+        saveItems();
     });
     
     checklistBody.addEventListener('change', (e) => {
         const row = e.target.closest('tr');
-        if (!row) return;
+        if (!row || e.target.type !== 'checkbox') return;
         const id = parseFloat(row.dataset.id);
         const item = items.find(i => i.id === id);
 
-        if (item && e.target.type === 'checkbox') {
+        if (item) {
             if (e.target.classList.contains('prepared')) item.prepared = e.target.checked;
             if (e.target.classList.contains('confirmed')) item.confirmed = e.target.checked;
             if (e.target.classList.contains('needsPurchase')) item.needsPurchase = e.target.checked;
+            
+            // 両方のビューのチェックボックスの状態を同期させる
+            const allCheckboxesInRow = row.querySelectorAll(`input[type="checkbox"]`);
+            allCheckboxesInRow.forEach(cb => {
+                if(cb.classList.contains('prepared')) cb.checked = item.prepared;
+                if(cb.classList.contains('confirmed')) cb.checked = item.confirmed;
+                if(cb.classList.contains('needsPurchase')) cb.checked = item.needsPurchase;
+            });
+
             updateProgress();
             saveItems();
         }
@@ -150,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     checklistBody.addEventListener('click', (e) => {
         const target = e.target;
-        if (target.classList.contains('btn-delete')) {
+        if (target.closest('.btn-delete')) {
             const row = target.closest('tr');
             if (!row) return;
             const id = parseFloat(row.dataset.id);
@@ -184,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
             needsPurchase: false, 
             memo: ''
         };
-        items.unshift(newItem); // pushからunshiftに変更し、リストの先頭に追加
+        items.unshift(newItem);
         renderList();
         updateProgress();
     });
@@ -194,6 +213,5 @@ document.addEventListener('DOMContentLoaded', () => {
         renderList();
     });
 
-    // アプリケーションを開始
     initializeApp();
 });
