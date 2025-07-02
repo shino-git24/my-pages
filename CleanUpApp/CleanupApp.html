@@ -1,0 +1,411 @@
+import React from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
+import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, runTransaction } from 'firebase/firestore';
+import { PlusCircle, Trash2, Edit, Save, X, ChevronsUpDown, Home, Box, Package } from 'lucide-react';
+
+// --- Firebase Configuration ---
+// These variables are provided by the environment.
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-organizer-app';
+
+// --- Main App Component ---
+export default function App() {
+    const [auth, setAuth] = React.useState(null);
+    const [db, setDb] = React.useState(null);
+    const [userId, setUserId] = React.useState(null);
+    const [isAuthReady, setIsAuthReady] = React.useState(false);
+
+    const [rooms, setRooms] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    
+    // --- Firebase Initialization and Auth ---
+    React.useEffect(() => {
+        const app = initializeApp(firebaseConfig);
+        const authInstance = getAuth(app);
+        const dbInstance = getFirestore(app);
+        
+        setAuth(authInstance);
+        setDb(dbInstance);
+
+        const unsubscribe = onAuthStateChanged(authInstance, async (user) => {
+            if (user) {
+                setUserId(user.uid);
+            } else {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(authInstance, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(authInstance);
+                    }
+                } catch (error) {
+                    console.error("Authentication failed:", error);
+                }
+            }
+            setIsAuthReady(true);
+        });
+        
+        return () => unsubscribe();
+    }, []);
+
+    // --- Firestore Data Fetching ---
+    React.useEffect(() => {
+        if (!isAuthReady || !db || !userId) return;
+
+        setLoading(true);
+        const roomsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'rooms');
+        const unsubscribe = onSnapshot(roomsCollectionRef, (snapshot) => {
+            const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Sort rooms by name for consistent order
+            roomsData.sort((a, b) => a.name.localeCompare(b.name));
+            setRooms(roomsData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching rooms:", error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [isAuthReady, db, userId]);
+
+    // --- Data Manipulation Functions ---
+    const getRoomsRef = () => collection(db, 'artifacts', appId, 'public', 'data', 'rooms');
+
+    const addRoom = async (roomName) => {
+        if (!roomName.trim()) return;
+        const newRoom = { name: roomName, locations: [] };
+        const newDocRef = doc(getRoomsRef());
+        await setDoc(newDocRef, newRoom);
+    };
+
+    const deleteRoom = async (roomId) => {
+        // Use a custom modal/dialog instead of window.confirm in a real app
+        if (window.confirm('この部屋と中のすべてのアイテムを削除しますか？')) {
+            await deleteDoc(doc(getRoomsRef(), roomId));
+        }
+    };
+    
+    const updateRoomName = async (roomId, newName) => {
+        if (!newName.trim()) return;
+        await updateDoc(doc(getRoomsRef(), roomId), { name: newName });
+    };
+
+    const addLocation = async (roomId, locationName) => {
+        if (!locationName.trim()) return;
+        const newLocation = { id: crypto.randomUUID(), name: locationName, items: [] };
+        await updateDoc(doc(getRoomsRef(), roomId), {
+            locations: arrayUnion(newLocation)
+        });
+    };
+
+    const deleteLocation = async (roomId, locationId) => {
+        if (window.confirm('この場所と中のすべてのアイテムを削除しますか？')) {
+            const roomRef = doc(getRoomsRef(), roomId);
+            await runTransaction(db, async (transaction) => {
+                const roomDoc = await transaction.get(roomRef);
+                if (!roomDoc.exists()) {
+                    throw "Document does not exist!";
+                }
+                const oldLocations = roomDoc.data().locations || [];
+                const newLocations = oldLocations.filter(loc => loc.id !== locationId);
+                transaction.update(roomRef, { locations: newLocations });
+            });
+        }
+    };
+    
+    const updateLocationName = async (roomId, locationId, newName) => {
+        if (!newName.trim()) return;
+        const roomRef = doc(getRoomsRef(), roomId);
+        await runTransaction(db, async (transaction) => {
+            const roomDoc = await transaction.get(roomRef);
+            if (!roomDoc.exists()) { throw "Document does not exist!"; }
+            const newLocations = roomDoc.data().locations.map(loc => 
+                loc.id === locationId ? { ...loc, name: newName } : loc
+            );
+            transaction.update(roomRef, { locations: newLocations });
+        });
+    };
+
+    const addItem = async (roomId, locationId, itemName) => {
+        if (!itemName.trim()) return;
+        const newItem = {
+            id: crypto.randomUUID(),
+            name: itemName,
+            status: '未定',
+            storage: '',
+            memo: '',
+            done: false
+        };
+        const roomRef = doc(getRoomsRef(), roomId);
+        await runTransaction(db, async (transaction) => {
+            const roomDoc = await transaction.get(roomRef);
+            if (!roomDoc.exists()) { throw "Document does not exist!"; }
+            const newLocations = roomDoc.data().locations.map(loc => {
+                if (loc.id === locationId) {
+                    return { ...loc, items: [...loc.items, newItem] };
+                }
+                return loc;
+            });
+            transaction.update(roomRef, { locations: newLocations });
+        });
+    };
+
+    const updateItem = async (roomId, locationId, itemId, updatedItem) => {
+        const roomRef = doc(getRoomsRef(), roomId);
+        await runTransaction(db, async (transaction) => {
+            const roomDoc = await transaction.get(roomRef);
+            if (!roomDoc.exists()) { throw "Document does not exist!"; }
+            const newLocations = roomDoc.data().locations.map(loc => {
+                if (loc.id === locationId) {
+                    const newItems = loc.items.map(item =>
+                        item.id === itemId ? { ...item, ...updatedItem } : item
+                    );
+                    return { ...loc, items: newItems };
+                }
+                return loc;
+            });
+            transaction.update(roomRef, { locations: newLocations });
+        });
+    };
+    
+    const deleteItem = async (roomId, locationId, itemId) => {
+        const roomRef = doc(getRoomsRef(), roomId);
+        await runTransaction(db, async (transaction) => {
+            const roomDoc = await transaction.get(roomRef);
+            if (!roomDoc.exists()) { throw "Document does not exist!"; }
+            const newLocations = roomDoc.data().locations.map(loc => {
+                if (loc.id === locationId) {
+                    const newItems = loc.items.filter(item => item.id !== itemId);
+                    return { ...loc, items: newItems };
+                }
+                return loc;
+            });
+            transaction.update(roomRef, { locations: newLocations });
+        });
+    };
+
+
+    if (loading) {
+        return <div className="flex justify-center items-center h-screen bg-slate-50 text-slate-500">読み込み中...</div>;
+    }
+
+    return (
+        <div className="bg-slate-50 min-h-screen font-sans text-slate-800 p-4 sm:p-6 lg:p-8">
+            <div className="max-w-4xl mx-auto">
+                <header className="mb-8">
+                    <h1 className="text-4xl font-bold text-slate-700 text-center mb-2">お片付け管理アプリ</h1>
+                    <p className="text-center text-slate-500">部屋のアイテムを整理して、スッキリした空間を目指しましょう。</p>
+                </header>
+
+                <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+                    <h2 className="text-2xl font-semibold mb-4 text-slate-600">部屋を追加</h2>
+                    <AddForm onAdd={addRoom} placeholder="例：キッチン" buttonText="部屋を追加" />
+                </div>
+
+                <div className="space-y-8">
+                    {rooms.map(room => (
+                        <RoomComponent
+                            key={room.id}
+                            room={room}
+                            onDeleteRoom={deleteRoom}
+                            onUpdateRoomName={updateRoomName}
+                            onAddLocation={addLocation}
+                            onDeleteLocation={deleteLocation}
+                            onUpdateLocationName={updateLocationName}
+                            onAddItem={addItem}
+                            onUpdateItem={updateItem}
+                            onDeleteItem={deleteItem}
+                        />
+                    ))}
+                </div>
+                 <footer className="text-center mt-12 text-sm text-slate-400">
+                    <p>ユーザーID: {userId || '未認証'}</p>
+                </footer>
+            </div>
+        </div>
+    );
+}
+
+// --- Sub-Components ---
+
+const RoomComponent = ({ room, onDeleteRoom, onUpdateRoomName, onAddLocation, ...locationProps }) => {
+    const [isEditing, setIsEditing] = React.useState(false);
+    const [name, setName] = React.useState(room.name);
+
+    const handleSave = () => {
+        onUpdateRoomName(room.id, name);
+        setIsEditing(false);
+    };
+
+    return (
+        <div className="bg-white rounded-xl shadow-lg p-6 transition-shadow duration-300 hover:shadow-xl">
+            <div className="flex justify-between items-center mb-4 pb-4 border-b border-slate-200">
+                <div className="flex items-center gap-3">
+                    <Home className="w-8 h-8 text-blue-500"/>
+                    {isEditing ? (
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="text-2xl font-bold bg-slate-100 rounded-md p-1"
+                            autoFocus
+                        />
+                    ) : (
+                        <h3 className="text-2xl font-bold text-slate-700">{room.name}</h3>
+                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                    {isEditing ? (
+                        <>
+                            <button onClick={handleSave} className="p-2 text-green-600 hover:bg-green-100 rounded-full"><Save size={20} /></button>
+                            <button onClick={() => { setIsEditing(false); setName(room.name); }} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full"><X size={20} /></button>
+                        </>
+                    ) : (
+                        <button onClick={() => setIsEditing(true)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full"><Edit size={20} /></button>
+                    )}
+                    <button onClick={() => onDeleteRoom(room.id)} className="p-2 text-red-500 hover:bg-red-100 rounded-full"><Trash2 size={20} /></button>
+                </div>
+            </div>
+            
+            <div className="space-y-6 pl-4">
+                 {room.locations.map(location => (
+                    <LocationComponent key={location.id} roomId={room.id} location={location} {...locationProps} />
+                ))}
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-slate-200">
+                 <AddForm onAdd={(locationName) => onAddLocation(room.id, locationName)} placeholder="例：シンク下、クローゼット" buttonText="場所を追加" />
+            </div>
+        </div>
+    );
+};
+
+const LocationComponent = ({ roomId, location, onDeleteLocation, onUpdateLocationName, onAddItem, ...itemProps }) => {
+    const [isEditing, setIsEditing] = React.useState(false);
+    const [name, setName] = React.useState(location.name);
+
+    const handleSave = () => {
+        onUpdateLocationName(roomId, location.id, name);
+        setIsEditing(false);
+    };
+
+    return (
+        <div className="bg-slate-50 rounded-lg p-4">
+             <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                    <Box className="w-6 h-6 text-indigo-500"/>
+                    {isEditing ? (
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="text-xl font-semibold bg-white rounded-md p-1"
+                            autoFocus
+                        />
+                    ) : (
+                        <h4 className="text-xl font-semibold text-slate-600">{location.name}</h4>
+                    )}
+                </div>
+                <div className="flex items-center gap-1">
+                    {isEditing ? (
+                         <>
+                            <button onClick={handleSave} className="p-2 text-green-600 hover:bg-green-100 rounded-full"><Save size={18} /></button>
+                            <button onClick={() => { setIsEditing(false); setName(location.name); }} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full"><X size={18} /></button>
+                        </>
+                    ) : (
+                        <button onClick={() => setIsEditing(true)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full"><Edit size={18} /></button>
+                    )}
+                    <button onClick={() => onDeleteLocation(roomId, location.id)} className="p-2 text-red-500 hover:bg-red-100 rounded-full"><Trash2 size={18} /></button>
+                </div>
+            </div>
+            <div className="space-y-2 pl-4">
+                {location.items.map(item => (
+                    <ItemComponent key={item.id} roomId={roomId} locationId={location.id} item={item} {...itemProps} />
+                ))}
+            </div>
+             <div className="mt-4 pt-3 border-t border-slate-200">
+                <AddForm onAdd={(itemName) => onAddItem(roomId, location.id, itemName)} placeholder="例：フライパン、古い雑誌" buttonText="アイテムを追加" />
+            </div>
+        </div>
+    );
+};
+
+const ItemComponent = ({ roomId, locationId, item, onUpdateItem, onDeleteItem }) => {
+    const handleUpdate = (field, value) => {
+        onUpdateItem(roomId, locationId, item.id, { [field]: value });
+    };
+
+    return (
+        <div className={`flex flex-col md:flex-row md:items-center gap-2 p-3 rounded-md transition-colors ${item.done ? 'bg-green-100 text-slate-500' : 'bg-white'}`}>
+            <div className="flex items-center gap-3 flex-grow">
+                <input
+                    type="checkbox"
+                    checked={item.done}
+                    onChange={(e) => handleUpdate('done', e.target.checked)}
+                    className="form-checkbox h-5 w-5 text-green-600 rounded focus:ring-green-500 cursor-pointer"
+                />
+                <input
+                    type="text"
+                    value={item.name}
+                    onChange={(e) => handleUpdate('name', e.target.value)}
+                    className={`font-medium w-full p-1 rounded-md ${item.done ? 'line-through bg-transparent' : 'bg-transparent hover:bg-slate-100'}`}
+                />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 pl-8 md:pl-0">
+                 <select
+                    value={item.status}
+                    onChange={(e) => handleUpdate('status', e.target.value)}
+                    className="text-sm p-1 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400"
+                >
+                    <option value="未定">未定</option>
+                    <option value="保管">保管</option>
+                    <option value="捨てる">捨てる</option>
+                    <option value="保留">保留</option>
+                </select>
+                <input
+                    type="text"
+                    placeholder="保管場所..."
+                    value={item.storage}
+                    onChange={(e) => handleUpdate('storage', e.target.value)}
+                    className="text-sm p-1 border border-slate-300 rounded-md w-28 focus:ring-2 focus:ring-blue-400"
+                />
+                <input
+                    type="text"
+                    placeholder="メモ..."
+                    value={item.memo}
+                    onChange={(e) => handleUpdate('memo', e.target.value)}
+                    className="text-sm p-1 border border-slate-300 rounded-md flex-grow md:flex-grow-0 w-32 focus:ring-2 focus:ring-blue-400"
+                />
+                <button onClick={() => onDeleteItem(roomId, locationId, item.id)} className="p-2 text-red-500 hover:bg-red-100 rounded-full ml-auto">
+                    <Trash2 size={16} />
+                </button>
+            </div>
+        </div>
+    );
+};
+
+const AddForm = ({ onAdd, placeholder, buttonText }) => {
+    const [name, setName] = React.useState('');
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onAdd(name);
+        setName('');
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="flex gap-2">
+            <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={placeholder}
+                className="flex-grow p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <button type="submit" className="flex items-center gap-2 bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <PlusCircle size={20} />
+                <span>{buttonText}</span>
+            </button>
+        </form>
+    );
+};
