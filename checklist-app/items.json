@@ -1,242 +1,290 @@
 [
   {
+    "category": "費用・支払い",
     "name": "フェス料金",
     "memo": "37,555円",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "費用・支払い",
     "name": "電子マネー",
     "memo": "1万円チャージ（aupay, waon, sapicaなど）",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "費用・支払い",
     "name": "現金",
     "memo": "数千円",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "衣類・身につけるもの",
     "name": "帽子",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "衣類・身につけるもの",
     "name": "サングラス",
     "memo": "100均で購入",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "衣類・身につけるもの",
     "name": "アームカバー",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "衣類・身につけるもの",
     "name": "下着",
     "memo": "2枚",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "衣類・身につけるもの",
     "name": "Tシャツ",
     "memo": "2枚",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "衣類・身につけるもの",
     "name": "靴下",
     "memo": "2足",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "衣類・身につけるもの",
     "name": "ボトム",
     "memo": "1着",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "衣類・身につけるもの",
     "name": "上着（カーディガン）",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "衣類・身につけるもの",
     "name": "上着（ジャンパー）",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "衣類・身につけるもの",
     "name": "レインコート",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "衣類・身につけるもの",
     "name": "折りたたみ長靴",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "衣類・身につけるもの",
     "name": "サンダル",
     "memo": "脱ぎはきしやすいもの",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "衣類・身につけるもの",
     "name": "コンタクトケース一式",
     "memo": "ドラッグストアで購入",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "充電器、コード",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "モバイルバッテリー",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "タオル",
     "memo": "2、3枚",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "ブランケット",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "レジャーシート",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "椅子 / 持ち運び椅子",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "寝袋",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "日焼け止め",
     "memo": "ドラッグストアで購入",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "虫除けスプレー",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "汗ふきシート",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "制汗剤",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "化粧品ポーチ",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "ティッシュ",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "ウェットティッシュ",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "ハンカチ",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "絆創膏",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "耳栓",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "アイマスク",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "ゴミ袋（大）",
     "memo": "2,3枚",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "ゴミ袋（小）",
     "memo": "5枚",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "ジップロック",
     "memo": "大小2枚ずつ",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "S字フック",
     "memo": "3個くらい（100均で購入）",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "手元ライト",
     "memo": "充電型（なければアマゾンで購入）",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "快適グッズ・便利グッズ",
     "name": "折りたたみ傘",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "貴重品・携行品",
     "name": "カード入れ",
     "memo": "カードキー, sapica, waon, マイナンバーカード",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "貴重品・携行品",
     "name": "サコッシュ",
     "memo": "ハンカチ, ティッシュなどを入れる",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "貴重品・携行品",
     "name": "家の鍵",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": false
   },
   {
+    "category": "飲食関係",
     "name": "凍らせたスポーツドリンク",
     "memo": "2本",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "飲食関係",
     "name": "水、スポーツドリンク",
     "memo": "各1本",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "飲食関係",
     "name": "ペットボトル入れ",
     "memo": "100均で購入",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "飲食関係",
     "name": "塩分補給タブレット",
     "memo": "",
-    "needsPurchase": ""
+    "needsPurchase": true
   },
   {
+    "category": "飲食関係",
     "name": "おつまみ",
     "memo": "前日購入",
-    "needsPurchase": ""
+    "needsPurchase": true
   }
 ]

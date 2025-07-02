@@ -10,19 +10,23 @@
 
     <div class="container">
         <h1>RSR 持ち物チェックリスト</h1>
+        
+        <div id="progress"></div>
+
         <div class="controls">
             <button id="addItemBtn" class="btn btn-add">＋ 項目を追加</button>
             <button id="sortBtn" class="btn btn-sort">「購入要否」で並び替え</button>
         </div>
+
         <table id="checklist">
             <thead>
                 <tr>
-                    <th>事前</th>
-                    <th>当日</th>
-                    <th>品名</th>
-                    <th>購入要否</th>
-                    <th>メモ</th>
-                    <th>操作</th>
+                    <th class="col-prepared">事前</th>
+                    <th class="col-confirmed">当日</th>
+                    <th class="col-name">品名</th>
+                    <th class="col-purchase">購入</th>
+                    <th class="col-memo">メモ</th>
+                    <th class="col-actions">操作</th>
                 </tr>
             </thead>
             <tbody>

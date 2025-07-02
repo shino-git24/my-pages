@@ -7,6 +7,7 @@ body {
     color: #333;
     background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png'); /* 木目調の背景テクスチャ */
 }
+
 .container {
     max-width: 800px;
     margin: 0 auto;
@@ -15,12 +16,198 @@ body {
     border-radius: 10px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
-/* (以下、前回のCSSコードをすべて貼り付け) */
+
 h1 {
     color: #8B4513; /* サドルブラウン */
     text-align: center;
     font-family: 'Helvetica Neue', sans-serif;
     font-weight: bold;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    margin-top: 0;
 }
-/* ...省略... */
+
+/* --- 進捗表示エリア --- */
+#progress {
+    background-color: #e9e9e9;
+    border-radius: 5px;
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: bold;
+    color: #555;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* --- 操作ボタンエリア --- */
+.controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap; /* スマホでボタンが折り返すように */
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+.btn-add { background-color: #28a745; }
+.btn-add:hover { background-color: #218838; }
+.btn-sort { background-color: #007bff; }
+.btn-sort:hover { background-color: #0069d9; }
+.btn-delete { background-color: #dc3545; padding: 5px 10px; }
+.btn-delete:hover { background-color: #c82333; }
+
+/* --- チェックリストテーブル --- */
+#checklist {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#checklist th, #checklist td {
+    padding: 12px 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+    vertical-align: middle;
+}
+
+#checklist th {
+    background-color: #8B4513;
+    color: white;
+    font-size: 14px;
+}
+
+#checklist input[type="text"] {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box; /* paddingを含めてwidthを100%にする */
+}
+
+#checklist input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+#checklist td.actions {
+    text-align: center;
+}
+
+/* カラム幅の調整 */
+.col-prepared, .col-confirmed, .col-purchase { width: 40px; text-align: center; }
+.col-actions { width: 60px; }
+.col-name { width: 30%; }
+
+
+/* --- カテゴリヘッダーのスタイル --- */
+.category-header {
+    background-color: #D2B48C; /* タン */
+    font-weight: bold;
+    font-size: 1.1em;
+    cursor: pointer;
+    position: relative; /* 矢印の位置の基準 */
+}
+
+.category-header:hover {
+    background-color: #C1A77E;
+}
+
+/* 開閉矢印のスタイル */
+.category-header .arrow {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid #333;
+    margin-right: 10px;
+    transition: transform 0.3s;
+}
+
+.category-header.collapsed .arrow {
+    transform: rotate(-90deg);
+}
+
+
+/* --- スマートフォン向けレスポンシブ対応 (画面幅が768px以下の場合) --- */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    .container {
+        padding: 15px;
+    }
+
+    /* テーブルのヘッダーを非表示にする */
+    #checklist thead {
+        display: none;
+    }
+
+    /* 各行をカードのように見せる */
+    #checklist tr {
+        display: block;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden; /* 角丸を有効にする */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    /* カテゴリヘッダーは対象外 */
+    #checklist tr.category-header {
+        display: table-row; /* テーブル行として維持 */
+        margin-bottom: 0;
+        border-radius: 0;
+    }
+    .category-header td {
+        padding: 15px;
+    }
+
+
+    /* テーブルのセルを行のように見せる */
+    #checklist td {
+        display: flex;
+        justify-content: space-between; /* ラベルと入力欄を両端に配置 */
+        align-items: center;
+        padding: 10px 15px;
+        border: none;
+        border-bottom: 1px solid #f0f0f0;
+        text-align: right; /* 入力内容を右寄せに */
+    }
+    #checklist tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* ::before疑似要素でラベルを追加 */
+    #checklist td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        text-align: left;
+        margin-right: 10px;
+    }
+    
+    /* 入力欄のスタイル調整 */
+    #checklist td input[type="text"] {
+        width: 60%; /* 幅を調整 */
+        text-align: left;
+    }
+    #checklist td input[type="checkbox"] {
+        width: 24px;
+        height: 24px;
+    }
+
+    .actions {
+        background-color: #f8f9fa;
+    }
+    .btn-delete {
+        width: 100%;
+        padding: 12px;
+    }
+
+}
