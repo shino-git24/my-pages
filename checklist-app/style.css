@@ -156,12 +156,11 @@ h1 {
         margin-bottom: 15px;
         border: 1px solid #ddd;
         border-radius: 8px;
-        overflow: hidden; /* 角丸を有効にする */
+        overflow: hidden;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    /* カテゴリヘッダーは対象外 */
     #checklist tr.category-header {
-        display: table-row; /* テーブル行として維持 */
+        display: table-row;
         margin-bottom: 0;
         border-radius: 0;
     }
@@ -169,18 +168,17 @@ h1 {
         padding: 15px;
     }
 
-
     /* テーブルのセルを行のように見せる */
     #checklist td {
-        display: flex;
-        justify-content: space-between; /* ラベルと入力欄を両端に配置 */
-        align-items: center;
-        padding: 10px 15px;
+        display: flex; /* Flexboxを有効化 */
+        justify-content: space-between; /* 両端揃え */
+        align-items: center; /* 垂直方向中央揃え */
+        padding: 12px 15px;
         border: none;
         border-bottom: 1px solid #f0f0f0;
-        text-align: right; /* 入力内容を右寄せに */
+        min-height: 24px;
     }
-    #checklist tr:last-child td {
+    #checklist tr td:last-child {
         border-bottom: none;
     }
 
@@ -188,26 +186,36 @@ h1 {
     #checklist td::before {
         content: attr(data-label);
         font-weight: bold;
-        text-align: left;
-        margin-right: 10px;
+        flex-shrink: 0; /* ラベルが縮まないようにする */
+        margin-right: 16px;
+    }
+
+    /* テキスト入力欄のスタイル */
+    #checklist td input[type="text"] {
+        flex-grow: 1; /* 残りのスペースをすべて埋める */
+        width: auto;  /* もとのwidth指定をリセット */
+        text-align: right;
+        padding: 8px;
     }
     
-    /* 入力欄のスタイル調整 */
-    #checklist td input[type="text"] {
-        width: 60%; /* 幅を調整 */
-        text-align: left;
-    }
+    /* チェックボックスのスタイル */
     #checklist td input[type="checkbox"] {
+        flex-shrink: 0; /* チェックボックスが縮まないように */
         width: 24px;
         height: 24px;
     }
 
-    .actions {
-        background-color: #f8f9fa;
+    /* 削除ボタンのセル */
+    #checklist td.actions {
+        padding: 0;
     }
-    .btn-delete {
+    /* 削除ボタン本体 */
+    #checklist td.actions .btn-delete {
         width: 100%;
-        padding: 12px;
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+        padding-top: 12px;
+        padding-bottom: 12px;
     }
-
 }
