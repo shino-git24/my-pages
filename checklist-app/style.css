@@ -1,0 +1,26 @@
+/* --- 全体のスタイル --- */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f5f5dc; /* ベージュ */
+    color: #333;
+    background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png'); /* 木目調の背景テクスチャ */
+}
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+/* (以下、前回のCSSコードをすべて貼り付け) */
+h1 {
+    color: #8B4513; /* サドルブラウン */
+    text-align: center;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+/* ...省略... */
