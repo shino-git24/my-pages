@@ -1,411 +1,319 @@
-import React from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, runTransaction } from 'firebase/firestore';
-import { PlusCircle, Trash2, Edit, Save, X, ChevronsUpDown, Home, Box, Package } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>片付け管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* カスタムフォーカスリング */
+        input:focus, select:focus, button:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #3b82f6; /* Tailwind's blue-500 */
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
 
-// --- Firebase Configuration ---
-// These variables are provided by the environment.
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-organizer-app';
+    <div id="app" class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- App content will be rendered here by JavaScript -->
+    </div>
 
-// --- Main App Component ---
-export default function App() {
-    const [auth, setAuth] = React.useState(null);
-    const [db, setDb] = React.useState(null);
-    const [userId, setUserId] = React.useState(null);
-    const [isAuthReady, setIsAuthReady] = React.useState(false);
+    <script>
+    // --- STATE MANAGEMENT ---
+    let state = {
+        rooms: []
+    };
 
-    const [rooms, setRooms] = React.useState([]);
-    const [loading, setLoading] = React.useState(true);
+    const STORAGE_KEY = 'katazuke-app-data';
+
+    // --- UTILITY FUNCTIONS ---
+    const saveState = () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    };
+
+    const loadState = () => {
+        const savedState = localStorage.getItem(STORAGE_KEY);
+        if (savedState) {
+            state = JSON.parse(savedState);
+        }
+    };
     
-    // --- Firebase Initialization and Auth ---
-    React.useEffect(() => {
-        const app = initializeApp(firebaseConfig);
-        const authInstance = getAuth(app);
-        const dbInstance = getFirestore(app);
-        
-        setAuth(authInstance);
-        setDb(dbInstance);
+    const generateId = () => `id_${new Date().getTime()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        const unsubscribe = onAuthStateChanged(authInstance, async (user) => {
-            if (user) {
-                setUserId(user.uid);
-            } else {
-                try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(authInstance, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(authInstance);
-                    }
-                } catch (error) {
-                    console.error("Authentication failed:", error);
+    // --- EVENT HANDLERS (using event delegation) ---
+    document.getElementById('app').addEventListener('click', (e) => {
+        // Delete Room
+        if (e.target.closest('.delete-room-btn')) {
+            const roomId = e.target.closest('.room-card').dataset.roomId;
+            if (confirm('この部屋と中のすべてのアイテムを削除しますか？')) {
+                state.rooms = state.rooms.filter(room => room.id !== roomId);
+                saveAndRender();
+            }
+        }
+        // Delete Location
+        if (e.target.closest('.delete-location-btn')) {
+            const card = e.target.closest('.room-card');
+            const roomId = card.dataset.roomId;
+            const locationId = e.target.closest('.location-card').dataset.locationId;
+            if (confirm('この場所と中のすべてのアイテムを削除しますか？')) {
+                const room = state.rooms.find(r => r.id === roomId);
+                if (room) {
+                    room.locations = room.locations.filter(loc => loc.id !== locationId);
+                }
+                saveAndRender();
+            }
+        }
+        // Delete Item
+        if (e.target.closest('.delete-item-btn')) {
+            const card = e.target.closest('.room-card');
+            const roomId = card.dataset.roomId;
+            const locationId = e.target.closest('.location-card').dataset.locationId;
+            const itemId = e.target.closest('.item-row').dataset.itemId;
+            const room = state.rooms.find(r => r.id === roomId);
+            if (room) {
+                const location = room.locations.find(loc => loc.id === locationId);
+                if (location) {
+                    location.items = location.items.filter(item => item.id !== itemId);
                 }
             }
-            setIsAuthReady(true);
-        });
+            saveAndRender();
+        }
+    });
+
+    document.getElementById('app').addEventListener('submit', (e) => {
+        e.preventDefault();
+        // Add Room
+        if (e.target.matches('.add-room-form')) {
+            const input = e.target.querySelector('input');
+            const roomName = input.value.trim();
+            if (roomName) {
+                state.rooms.push({ id: generateId(), name: roomName, locations: [] });
+                input.value = '';
+                saveAndRender();
+            }
+        }
+        // Add Location
+        if (e.target.matches('.add-location-form')) {
+            const roomId = e.target.closest('.room-card').dataset.roomId;
+            const input = e.target.querySelector('input');
+            const locationName = input.value.trim();
+            const room = state.rooms.find(r => r.id === roomId);
+            if (room && locationName) {
+                room.locations.push({ id: generateId(), name: locationName, items: [] });
+                input.value = '';
+                saveAndRender();
+            }
+        }
+        // Add Item
+        if (e.target.matches('.add-item-form')) {
+            const roomId = e.target.closest('.room-card').dataset.roomId;
+            const locationId = e.target.closest('.location-card').dataset.locationId;
+            const input = e.target.querySelector('input');
+            const itemName = input.value.trim();
+            const room = state.rooms.find(r => r.id === roomId);
+            if(room && itemName) {
+                const location = room.locations.find(loc => loc.id === locationId);
+                if (location) {
+                    location.items.push({
+                        id: generateId(),
+                        name: itemName,
+                        status: '未定',
+                        storage: '',
+                        memo: '',
+                        done: false
+                    });
+                    input.value = '';
+                    saveAndRender();
+                }
+            }
+        }
+    });
+    
+    document.getElementById('app').addEventListener('change', (e) => {
+        const card = e.target.closest('.room-card');
+        if (!card) return;
         
-        return () => unsubscribe();
-    }, []);
+        const roomId = card.dataset.roomId;
+        const locationId = e.target.closest('.location-card')?.dataset.locationId;
+        const itemId = e.target.closest('.item-row')?.dataset.itemId;
+        
+        const room = state.rooms.find(r => r.id === roomId);
+        if (!room) return;
 
-    // --- Firestore Data Fetching ---
-    React.useEffect(() => {
-        if (!isAuthReady || !db || !userId) return;
+        // Update Item
+        if (itemId) {
+            const location = room.locations.find(loc => loc.id === locationId);
+            if (!location) return;
+            const item = location.items.find(i => i.id === itemId);
+            if (!item) return;
 
-        setLoading(true);
-        const roomsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'rooms');
-        const unsubscribe = onSnapshot(roomsCollectionRef, (snapshot) => {
-            const roomsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            // Sort rooms by name for consistent order
-            roomsData.sort((a, b) => a.name.localeCompare(b.name));
-            setRooms(roomsData);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching rooms:", error);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [isAuthReady, db, userId]);
-
-    // --- Data Manipulation Functions ---
-    const getRoomsRef = () => collection(db, 'artifacts', appId, 'public', 'data', 'rooms');
-
-    const addRoom = async (roomName) => {
-        if (!roomName.trim()) return;
-        const newRoom = { name: roomName, locations: [] };
-        const newDocRef = doc(getRoomsRef());
-        await setDoc(newDocRef, newRoom);
-    };
-
-    const deleteRoom = async (roomId) => {
-        // Use a custom modal/dialog instead of window.confirm in a real app
-        if (window.confirm('この部屋と中のすべてのアイテムを削除しますか？')) {
-            await deleteDoc(doc(getRoomsRef(), roomId));
+            const target = e.target;
+            if (target.matches('.item-name-input')) item.name = target.value;
+            if (target.matches('.item-status-select')) item.status = target.value;
+            if (target.matches('.item-storage-input')) item.storage = target.value;
+            if (target.matches('.item-memo-input')) item.memo = target.value;
+            if (target.matches('.item-done-checkbox')) item.done = target.checked;
+            
+            saveAndRender();
         }
-    };
+    });
     
-    const updateRoomName = async (roomId, newName) => {
-        if (!newName.trim()) return;
-        await updateDoc(doc(getRoomsRef(), roomId), { name: newName });
-    };
+    document.getElementById('app').addEventListener('input', (e) => {
+        const card = e.target.closest('.room-card');
+        if (!card) return;
+        
+        const roomId = card.dataset.roomId;
+        const locationId = e.target.closest('.location-card')?.dataset.locationId;
+        
+        const room = state.rooms.find(r => r.id === roomId);
+        if (!room) return;
 
-    const addLocation = async (roomId, locationName) => {
-        if (!locationName.trim()) return;
-        const newLocation = { id: crypto.randomUUID(), name: locationName, items: [] };
-        await updateDoc(doc(getRoomsRef(), roomId), {
-            locations: arrayUnion(newLocation)
-        });
-    };
-
-    const deleteLocation = async (roomId, locationId) => {
-        if (window.confirm('この場所と中のすべてのアイテムを削除しますか？')) {
-            const roomRef = doc(getRoomsRef(), roomId);
-            await runTransaction(db, async (transaction) => {
-                const roomDoc = await transaction.get(roomRef);
-                if (!roomDoc.exists()) {
-                    throw "Document does not exist!";
-                }
-                const oldLocations = roomDoc.data().locations || [];
-                const newLocations = oldLocations.filter(loc => loc.id !== locationId);
-                transaction.update(roomRef, { locations: newLocations });
-            });
+        // Update Room Name
+        if (e.target.matches('.room-name-input')) {
+            room.name = e.target.value;
+            saveState(); // Render is not needed on every keystroke
         }
-    };
-    
-    const updateLocationName = async (roomId, locationId, newName) => {
-        if (!newName.trim()) return;
-        const roomRef = doc(getRoomsRef(), roomId);
-        await runTransaction(db, async (transaction) => {
-            const roomDoc = await transaction.get(roomRef);
-            if (!roomDoc.exists()) { throw "Document does not exist!"; }
-            const newLocations = roomDoc.data().locations.map(loc => 
-                loc.id === locationId ? { ...loc, name: newName } : loc
-            );
-            transaction.update(roomRef, { locations: newLocations });
-        });
-    };
+        // Update Location Name
+        else if (e.target.matches('.location-name-input')) {
+            const location = room.locations.find(loc => loc.id === locationId);
+            if (location) {
+                location.name = e.target.value;
+                saveState();
+            }
+        }
+    });
 
-    const addItem = async (roomId, locationId, itemName) => {
-        if (!itemName.trim()) return;
-        const newItem = {
-            id: crypto.randomUUID(),
-            name: itemName,
-            status: '未定',
-            storage: '',
-            memo: '',
-            done: false
-        };
-        const roomRef = doc(getRoomsRef(), roomId);
-        await runTransaction(db, async (transaction) => {
-            const roomDoc = await transaction.get(roomRef);
-            if (!roomDoc.exists()) { throw "Document does not exist!"; }
-            const newLocations = roomDoc.data().locations.map(loc => {
-                if (loc.id === locationId) {
-                    return { ...loc, items: [...loc.items, newItem] };
-                }
-                return loc;
-            });
-            transaction.update(roomRef, { locations: newLocations });
-        });
+
+    // --- TEMPLATE & RENDER FUNCTIONS ---
+    const saveAndRender = () => {
+        saveState();
+        render();
     };
 
-    const updateItem = async (roomId, locationId, itemId, updatedItem) => {
-        const roomRef = doc(getRoomsRef(), roomId);
-        await runTransaction(db, async (transaction) => {
-            const roomDoc = await transaction.get(roomRef);
-            if (!roomDoc.exists()) { throw "Document does not exist!"; }
-            const newLocations = roomDoc.data().locations.map(loc => {
-                if (loc.id === locationId) {
-                    const newItems = loc.items.map(item =>
-                        item.id === itemId ? { ...item, ...updatedItem } : item
-                    );
-                    return { ...loc, items: newItems };
-                }
-                return loc;
-            });
-            transaction.update(roomRef, { locations: newLocations });
-        });
-    };
-    
-    const deleteItem = async (roomId, locationId, itemId) => {
-        const roomRef = doc(getRoomsRef(), roomId);
-        await runTransaction(db, async (transaction) => {
-            const roomDoc = await transaction.get(roomRef);
-            if (!roomDoc.exists()) { throw "Document does not exist!"; }
-            const newLocations = roomDoc.data().locations.map(loc => {
-                if (loc.id === locationId) {
-                    const newItems = loc.items.filter(item => item.id !== itemId);
-                    return { ...loc, items: newItems };
-                }
-                return loc;
-            });
-            transaction.update(roomRef, { locations: newLocations });
-        });
-    };
-
-
-    if (loading) {
-        return <div className="flex justify-center items-center h-screen bg-slate-50 text-slate-500">読み込み中...</div>;
-    }
-
-    return (
-        <div className="bg-slate-50 min-h-screen font-sans text-slate-800 p-4 sm:p-6 lg:p-8">
-            <div className="max-w-4xl mx-auto">
-                <header className="mb-8">
-                    <h1 className="text-4xl font-bold text-slate-700 text-center mb-2">お片付け管理アプリ</h1>
-                    <p className="text-center text-slate-500">部屋のアイテムを整理して、スッキリした空間を目指しましょう。</p>
-                </header>
-
-                <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-                    <h2 className="text-2xl font-semibold mb-4 text-slate-600">部屋を追加</h2>
-                    <AddForm onAdd={addRoom} placeholder="例：キッチン" buttonText="部屋を追加" />
+    const createItemHTML = (item) => {
+        const doneClass = item.done ? 'bg-green-100 text-slate-500 line-through' : 'bg-white';
+        return `
+            <div data-item-id="${item.id}" class="item-row flex flex-col md:flex-row md:items-center gap-2 p-3 rounded-md transition-colors ${doneClass}">
+                <div class="flex items-center gap-3 flex-grow">
+                    <input type="checkbox" ${item.done ? 'checked' : ''} class="item-done-checkbox form-checkbox h-5 w-5 text-green-600 rounded focus:ring-green-500 cursor-pointer flex-shrink-0">
+                    <input type="text" value="${item.name}" class="item-name-input font-medium w-full p-1 rounded-md bg-transparent hover:bg-slate-100">
                 </div>
-
-                <div className="space-y-8">
-                    {rooms.map(room => (
-                        <RoomComponent
-                            key={room.id}
-                            room={room}
-                            onDeleteRoom={deleteRoom}
-                            onUpdateRoomName={updateRoomName}
-                            onAddLocation={addLocation}
-                            onDeleteLocation={deleteLocation}
-                            onUpdateLocationName={updateLocationName}
-                            onAddItem={addItem}
-                            onUpdateItem={updateItem}
-                            onDeleteItem={deleteItem}
-                        />
-                    ))}
+                <div class="flex flex-wrap items-center gap-2 pl-8 md:pl-0">
+                    <select class="item-status-select text-sm p-1 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400">
+                        <option value="未定" ${item.status === '未定' ? 'selected' : ''}>未定</option>
+                        <option value="保管" ${item.status === '保管' ? 'selected' : ''}>保管</option>
+                        <option value="捨てる" ${item.status === '捨てる' ? 'selected' : ''}>捨てる</option>
+                        <option value="保留" ${item.status === '保留' ? 'selected' : ''}>保留</option>
+                    </select>
+                    <input type="text" placeholder="保管場所..." value="${item.storage}" class="item-storage-input text-sm p-1 border border-slate-300 rounded-md w-28 focus:ring-2 focus:ring-blue-400">
+                    <input type="text" placeholder="メモ..." value="${item.memo}" class="item-memo-input text-sm p-1 border border-slate-300 rounded-md flex-grow md:flex-grow-0 w-32 focus:ring-2 focus:ring-blue-400">
+                    <button class="delete-item-btn p-2 text-red-500 hover:bg-red-100 rounded-full ml-auto">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
                 </div>
-                 <footer className="text-center mt-12 text-sm text-slate-400">
-                    <p>ユーザーID: {userId || '未認証'}</p>
-                </footer>
             </div>
-        </div>
-    );
-}
-
-// --- Sub-Components ---
-
-const RoomComponent = ({ room, onDeleteRoom, onUpdateRoomName, onAddLocation, ...locationProps }) => {
-    const [isEditing, setIsEditing] = React.useState(false);
-    const [name, setName] = React.useState(room.name);
-
-    const handleSave = () => {
-        onUpdateRoomName(room.id, name);
-        setIsEditing(false);
+        `;
     };
 
-    return (
-        <div className="bg-white rounded-xl shadow-lg p-6 transition-shadow duration-300 hover:shadow-xl">
-            <div className="flex justify-between items-center mb-4 pb-4 border-b border-slate-200">
-                <div className="flex items-center gap-3">
-                    <Home className="w-8 h-8 text-blue-500"/>
-                    {isEditing ? (
-                        <input
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="text-2xl font-bold bg-slate-100 rounded-md p-1"
-                            autoFocus
-                        />
-                    ) : (
-                        <h3 className="text-2xl font-bold text-slate-700">{room.name}</h3>
-                    )}
+    const createLocationHTML = (location) => {
+        return `
+            <div data-location-id="${location.id}" class="location-card bg-slate-50 rounded-lg p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-box text-indigo-500 fa-lg"></i>
+                        <input type="text" value="${location.name}" class="location-name-input text-xl font-semibold text-slate-600 bg-transparent rounded-md p-1 hover:bg-slate-200">
+                    </div>
+                    <button class="delete-location-btn p-2 text-red-500 hover:bg-red-100 rounded-full">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
                 </div>
-                <div className="flex items-center gap-2">
-                    {isEditing ? (
-                        <>
-                            <button onClick={handleSave} className="p-2 text-green-600 hover:bg-green-100 rounded-full"><Save size={20} /></button>
-                            <button onClick={() => { setIsEditing(false); setName(room.name); }} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full"><X size={20} /></button>
-                        </>
-                    ) : (
-                        <button onClick={() => setIsEditing(true)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full"><Edit size={20} /></button>
-                    )}
-                    <button onClick={() => onDeleteRoom(room.id)} className="p-2 text-red-500 hover:bg-red-100 rounded-full"><Trash2 size={20} /></button>
+                <div class="space-y-2 pl-4">
+                    ${location.items.map(createItemHTML).join('')}
                 </div>
+                <div class="mt-4 pt-3 border-t border-slate-200">
+                    <form class="add-item-form flex gap-2">
+                        <input type="text" placeholder="例：フライパン、古い雑誌" class="flex-grow p-2 border border-slate-300 rounded-lg" required>
+                        <button type="submit" class="flex items-center gap-2 bg-indigo-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-600 transition-colors">
+                            <i class="fas fa-plus-circle"></i><span>アイテム追加</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        `;
+    };
+
+    const createRoomHTML = (room) => {
+        return `
+            <div data-room-id="${room.id}" class="room-card bg-white rounded-xl shadow-lg p-6 transition-shadow duration-300 hover:shadow-xl fade-in">
+                <div class="flex justify-between items-center mb-4 pb-4 border-b border-slate-200">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-home text-blue-500 fa-2x"></i>
+                        <input type="text" value="${room.name}" class="room-name-input text-2xl font-bold text-slate-700 bg-transparent rounded-md p-1 hover:bg-slate-100">
+                    </div>
+                    <button class="delete-room-btn p-2 text-red-500 hover:bg-red-100 rounded-full">
+                         <i class="fas fa-trash-alt fa-lg"></i>
+                    </button>
+                </div>
+                <div class="space-y-6 pl-4">
+                    ${room.locations.map(createLocationHTML).join('')}
+                </div>
+                <div class="mt-6 pt-4 border-t border-slate-200">
+                    <form class="add-location-form flex gap-2">
+                        <input type="text" placeholder="例：シンク下、クローゼット" class="flex-grow p-2 border border-slate-300 rounded-lg" required>
+                        <button type="submit" class="flex items-center gap-2 bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                            <i class="fas fa-plus-circle"></i><span>場所を追加</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        `;
+    };
+
+    const render = () => {
+        const appContainer = document.getElementById('app');
+        appContainer.innerHTML = `
+            <header class="mb-8">
+                <h1 class="text-4xl font-bold text-slate-700 text-center mb-2">お片付け管理アプリ</h1>
+                <p class="text-center text-slate-500">HTML版 - データはブラウザに保存されます</p>
+            </header>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-semibold mb-4 text-slate-600">部屋を追加</h2>
+                <form class="add-room-form flex gap-2">
+                    <input type="text" placeholder="例：キッチン" class="flex-grow p-2 border border-slate-300 rounded-lg" required>
+                    <button type="submit" class="flex items-center gap-2 bg-green-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                        <i class="fas fa-plus-circle"></i><span>部屋を追加</span>
+                    </button>
+                </form>
+            </div>
+
+            <div class="space-y-8">
+                ${state.rooms.map(createRoomHTML).join('')}
             </div>
             
-            <div className="space-y-6 pl-4">
-                 {room.locations.map(location => (
-                    <LocationComponent key={location.id} roomId={room.id} location={location} {...locationProps} />
-                ))}
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-slate-200">
-                 <AddForm onAdd={(locationName) => onAddLocation(room.id, locationName)} placeholder="例：シンク下、クローゼット" buttonText="場所を追加" />
-            </div>
-        </div>
-    );
-};
-
-const LocationComponent = ({ roomId, location, onDeleteLocation, onUpdateLocationName, onAddItem, ...itemProps }) => {
-    const [isEditing, setIsEditing] = React.useState(false);
-    const [name, setName] = React.useState(location.name);
-
-    const handleSave = () => {
-        onUpdateLocationName(roomId, location.id, name);
-        setIsEditing(false);
+            <footer class="text-center mt-12 text-sm text-slate-400">
+                <p>データは自動でこのブラウザに保存されます。</p>
+            </footer>
+        `;
     };
 
-    return (
-        <div className="bg-slate-50 rounded-lg p-4">
-             <div className="flex justify-between items-center mb-3">
-                <div className="flex items-center gap-2">
-                    <Box className="w-6 h-6 text-indigo-500"/>
-                    {isEditing ? (
-                        <input
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="text-xl font-semibold bg-white rounded-md p-1"
-                            autoFocus
-                        />
-                    ) : (
-                        <h4 className="text-xl font-semibold text-slate-600">{location.name}</h4>
-                    )}
-                </div>
-                <div className="flex items-center gap-1">
-                    {isEditing ? (
-                         <>
-                            <button onClick={handleSave} className="p-2 text-green-600 hover:bg-green-100 rounded-full"><Save size={18} /></button>
-                            <button onClick={() => { setIsEditing(false); setName(location.name); }} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full"><X size={18} /></button>
-                        </>
-                    ) : (
-                        <button onClick={() => setIsEditing(true)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full"><Edit size={18} /></button>
-                    )}
-                    <button onClick={() => onDeleteLocation(roomId, location.id)} className="p-2 text-red-500 hover:bg-red-100 rounded-full"><Trash2 size={18} /></button>
-                </div>
-            </div>
-            <div className="space-y-2 pl-4">
-                {location.items.map(item => (
-                    <ItemComponent key={item.id} roomId={roomId} locationId={location.id} item={item} {...itemProps} />
-                ))}
-            </div>
-             <div className="mt-4 pt-3 border-t border-slate-200">
-                <AddForm onAdd={(itemName) => onAddItem(roomId, location.id, itemName)} placeholder="例：フライパン、古い雑誌" buttonText="アイテムを追加" />
-            </div>
-        </div>
-    );
-};
-
-const ItemComponent = ({ roomId, locationId, item, onUpdateItem, onDeleteItem }) => {
-    const handleUpdate = (field, value) => {
-        onUpdateItem(roomId, locationId, item.id, { [field]: value });
-    };
-
-    return (
-        <div className={`flex flex-col md:flex-row md:items-center gap-2 p-3 rounded-md transition-colors ${item.done ? 'bg-green-100 text-slate-500' : 'bg-white'}`}>
-            <div className="flex items-center gap-3 flex-grow">
-                <input
-                    type="checkbox"
-                    checked={item.done}
-                    onChange={(e) => handleUpdate('done', e.target.checked)}
-                    className="form-checkbox h-5 w-5 text-green-600 rounded focus:ring-green-500 cursor-pointer"
-                />
-                <input
-                    type="text"
-                    value={item.name}
-                    onChange={(e) => handleUpdate('name', e.target.value)}
-                    className={`font-medium w-full p-1 rounded-md ${item.done ? 'line-through bg-transparent' : 'bg-transparent hover:bg-slate-100'}`}
-                />
-            </div>
-            <div className="flex flex-wrap items-center gap-2 pl-8 md:pl-0">
-                 <select
-                    value={item.status}
-                    onChange={(e) => handleUpdate('status', e.target.value)}
-                    className="text-sm p-1 border border-slate-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400"
-                >
-                    <option value="未定">未定</option>
-                    <option value="保管">保管</option>
-                    <option value="捨てる">捨てる</option>
-                    <option value="保留">保留</option>
-                </select>
-                <input
-                    type="text"
-                    placeholder="保管場所..."
-                    value={item.storage}
-                    onChange={(e) => handleUpdate('storage', e.target.value)}
-                    className="text-sm p-1 border border-slate-300 rounded-md w-28 focus:ring-2 focus:ring-blue-400"
-                />
-                <input
-                    type="text"
-                    placeholder="メモ..."
-                    value={item.memo}
-                    onChange={(e) => handleUpdate('memo', e.target.value)}
-                    className="text-sm p-1 border border-slate-300 rounded-md flex-grow md:flex-grow-0 w-32 focus:ring-2 focus:ring-blue-400"
-                />
-                <button onClick={() => onDeleteItem(roomId, locationId, item.id)} className="p-2 text-red-500 hover:bg-red-100 rounded-full ml-auto">
-                    <Trash2 size={16} />
-                </button>
-            </div>
-        </div>
-    );
-};
-
-const AddForm = ({ onAdd, placeholder, buttonText }) => {
-    const [name, setName] = React.useState('');
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        onAdd(name);
-        setName('');
-    };
-
-    return (
-        <form onSubmit={handleSubmit} className="flex gap-2">
-            <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={placeholder}
-                className="flex-grow p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <button type="submit" className="flex items-center gap-2 bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                <PlusCircle size={20} />
-                <span>{buttonText}</span>
-            </button>
-        </form>
-    );
-};
+    // --- INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', () => {
+        loadState();
+        render();
+    });
+    </script>
+</body>
+</html>
