@@ -2,7 +2,7 @@
     "name": "FloatNote",
     "short_name": "FloatNote",
     "description": "A simple and fast PWA notepad application.",
-    "start_url": "/",
+    "start_url": "./",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#f8f9fa",
